@@ -9,7 +9,7 @@ class WowProvider : MainAPI() {
     override var mainUrl = "https://www.wow.xxx"
     override var lang = "en"
     override val hasMainPage = true
-    override val supportedTypes = setOf(TvType.Movie)
+    override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries, TvType.Others)
 
     private val headers = mapOf(
         "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -38,7 +38,9 @@ class WowProvider : MainAPI() {
             
             if (title.isBlank() || href.contains("/models/") || href.contains("/channels/")) return@mapNotNull null
             
-            newMovieSearchResponse(title, href, TvType.Movie) { 
+            val type = if (title.contains("episode", true) || title.contains("series", true)) TvType.TvSeries else TvType.Movie
+            
+            newMovieSearchResponse(title, href, type) { 
                 posterUrl = poster 
             }
         }
@@ -55,7 +57,9 @@ class WowProvider : MainAPI() {
             
             if (title.isBlank()) return@mapNotNull null
             
-            newMovieSearchResponse(title, href, TvType.Movie) { 
+            val type = if (title.contains("episode", true) || title.contains("series", true)) TvType.TvSeries else TvType.Movie
+            
+            newMovieSearchResponse(title, href, type) { 
                 posterUrl = poster 
             }
         }
@@ -75,11 +79,20 @@ class WowProvider : MainAPI() {
             ?: doc.selectFirst(".video-info, .description")?.text()
             
         val tags = doc.select(".tags a, .video-tags a").map { it.text() }.take(10)
+        
+        val isSeries = title.contains("episode", true) || title.contains("series", true)
 
-        return newMovieLoadResponse(title, url, TvType.Movie, url) {
-            this.posterUrl = poster
-            this.plot = description
-            this.tags = tags
+        return if (isSeries) {
+            newTvSeriesLoadResponse(title, url, TvType.TvSeries, listOf(Episode(url))) {
+                this.posterUrl = poster
+                this.plot = description
+            }
+        } else {
+            newMovieLoadResponse(title, url, TvType.Movie, url) {
+                this.posterUrl = poster
+                this.plot = description
+                this.tags = tags
+            }
         }
     }
 
