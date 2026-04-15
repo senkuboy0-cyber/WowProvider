@@ -34,7 +34,7 @@ jobs:
             {
               "url": "https://raw.githubusercontent.com/senkuboy0-cyber/WowProvider/builds/WowProvider.cs3",
               "internalName": "WowProvider",
-              "tvTypes": ["Movie"],
+              "tvTypes": ["Movie", "TvSeries", "Others"],
               "language": "en",
               "name": "Wow",
               "authors": ["senkuboy0-cyber"],
