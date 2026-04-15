@@ -43,11 +43,12 @@ class WowProvider : MainAPI() {
         }
         
         val doc = app.get(url, headers = headers).document
-        val items = doc.select("div.video-item, div.thumb, article.post").mapNotNull { element ->
-            val a = element.selectFirst("a[href]") ?: return@mapNotNull null
+        val items = doc.select("div.video-item, div.thumb, article.post").mapNotNull { el ->
+            val a = el.selectFirst("a[href]") ?: return@mapNotNull null
             val href = a.attr("abs:href").ifBlank { return@mapNotNull null }
             val title = a.attr("title").ifBlank { a.selectFirst("span.title, h2, h3")?.text() }?.trim() ?: return@mapNotNull null
-            val poster = element.selectFirst("img")?.attr("data-src")?.ifBlank { it.attr("src") } ?: return@mapNotNull null
+            val img = el.selectFirst("img")
+            val poster = img?.attr("data-src")?.ifBlank { img.attr("src") } ?: return@mapNotNull null
             
             if (title.isBlank() || href.contains("/models/") || href.contains("/channels/") || href.contains("/pornstars/")) return@mapNotNull null
             
@@ -60,11 +61,12 @@ class WowProvider : MainAPI() {
 
     override suspend fun search(query: String): List<SearchResponse> {
         val doc = app.get("$mainUrl/search/${query.replace(" ", "-")}/relevance/", headers = headers).document
-        return doc.select("div.video-item, div.thumb, article.post").mapNotNull { element ->
-            val a = element.selectFirst("a[href]") ?: return@mapNotNull null
+        return doc.select("div.video-item, div.thumb, article.post").mapNotNull { el ->
+            val a = el.selectFirst("a[href]") ?: return@mapNotNull null
             val href = a.attr("abs:href").ifBlank { return@mapNotNull null }
             val title = a.attr("title").ifBlank { a.selectFirst("span.title, h2, h3")?.text() }?.trim() ?: return@mapNotNull null
-            val poster = element.selectFirst("img")?.attr("data-src")?.ifBlank { it.attr("src") } ?: return@mapNotNull null
+            val img = el.selectFirst("img")
+            val poster = img?.attr("data-src")?.ifBlank { img.attr("src") } ?: return@mapNotNull null
             
             if (title.isBlank()) return@mapNotNull null
             
@@ -123,7 +125,13 @@ class WowProvider : MainAPI() {
             }
             
             callback(
-                newExtractorLink(name, "$name ${quality}p", fullUrl, mainUrl, quality)
+                ExtractorLink(
+                    name,
+                    "$name ${quality}p",
+                    fullUrl,
+                    mainUrl,
+                    quality
+                )
             )
         }
         
