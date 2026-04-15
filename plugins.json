@@ -2,10 +2,11 @@
   {
     "name": "Wow",
     "description": "Wow.xxx - Free Porn Videos",
-    "url": "https://github.com/senkuboy0-cyber/WowProvider/releases/latest/download/WowProvider.apk",
+    "url": "https://raw.githubusercontent.com/senkuboy0-cyber/WowProvider/builds/WowProvider.cs3",
     "version": 1,
     "authors": ["senkuboy0-cyber"],
     "language": "en",
-    "types": ["movie"]
+    "types": ["movie"],
+    "repositoryUrl": "https://github.com/senkuboy0-cyber/WowProvider"
   }
 ]
