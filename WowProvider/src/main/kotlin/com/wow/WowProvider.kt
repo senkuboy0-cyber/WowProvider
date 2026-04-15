@@ -107,19 +107,19 @@ class WowProvider : MainAPI() {
         val doc = app.get(data, headers = headers).document
         val html = doc.toString()
         
-        // Extract video URLs - remove trailing slash
+        // Keep trailing slash - it's needed for 302 redirect to work
         val videoRegex = Regex("""get_file/\d+/[a-f0-9]+/\d+/\d+/[^"'\s]+\.mp4""")
-        val matches = videoRegex.findAll(html).map { it.value.trimEnd('/') }.distinct().toList()
+        val matches = videoRegex.findAll(html).map { it.value }.distinct().toList()
         
         if (matches.isEmpty()) {
             return false
         }
         
-        // Add referer to headers for video playback
         val videoHeaders = headers + mapOf("Referer" to mainUrl)
         
         matches.forEach { path ->
-            val fullUrl = "$mainUrl/$path"
+            // Keep trailing slash
+            val fullUrl = "$mainUrl/$path/"
             val quality = when {
                 path.contains("2160m") -> Qualities.P2160.value
                 path.contains("1080m") -> Qualities.P1080.value
