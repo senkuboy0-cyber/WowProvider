@@ -2,7 +2,6 @@ package com.wow
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
-import org.jsoup.Jsoup
 
 class WowProvider : MainAPI() {
     override var name = "Wow"
@@ -28,17 +27,7 @@ class WowProvider : MainAPI() {
         "$mainUrl/categories/hd/" to "HD",
         "$mainUrl/categories/milf/" to "MILF",
         "$mainUrl/categories/teen/" to "Teen",
-        "$mainUrl/categories/massage/" to "Massage",
-        "$mainUrl/categories/indian/" to "Indian",
-        "$mainUrl/categories/interracial/" to "Interracial",
-        "$mainUrl/categories/lesbian/" to "Lesbian",
-        "$mainUrl/categories/pov/" to "POV",
-        "$mainUrl/categories/threesome/" to "Threesome",
-        "$mainUrl/categories/mature/" to "Mature",
-        "$mainUrl/categories/hardcore/" to "Hardcore",
-        "$mainUrl/categories/ebony/" to "Ebony",
-        "$mainUrl/categories/latina/" to "Latina",
-        "$mainUrl/categories/asian/" to "Asian"
+        "$mainUrl/categories/indian/" to "Indian"
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
@@ -62,9 +51,7 @@ class WowProvider : MainAPI() {
             
             if (title.isBlank() || href.contains("/models/") || href.contains("/channels/") || href.contains("/pornstars/")) return@mapNotNull null
             
-            val type = if (title.contains("episode", true) || title.contains("series", true)) TvType.TvSeries else TvType.Movie
-            
-            newMovieSearchResponse(title, href, type) { 
+            newMovieSearchResponse(title, href, TvType.Movie) { 
                 posterUrl = poster 
             }
         }
@@ -81,9 +68,7 @@ class WowProvider : MainAPI() {
             
             if (title.isBlank()) return@mapNotNull null
             
-            val type = if (title.contains("episode", true) || title.contains("series", true)) TvType.TvSeries else TvType.Movie
-            
-            newMovieSearchResponse(title, href, type) { 
+            newMovieSearchResponse(title, href, TvType.Movie) { 
                 posterUrl = poster 
             }
         }
@@ -103,20 +88,11 @@ class WowProvider : MainAPI() {
             ?: doc.selectFirst(".video-info, .description")?.text()
             
         val tags = doc.select(".tags a, .video-tags a").map { it.text() }.take(10)
-        
-        val isSeries = title.contains("episode", true) || title.contains("series", true)
 
-        return if (isSeries) {
-            newTvSeriesLoadResponse(title, url, TvType.TvSeries, listOf(Episode(url))) {
-                this.posterUrl = poster
-                this.plot = description
-            }
-        } else {
-            newMovieLoadResponse(title, url, TvType.Movie, url) {
-                this.posterUrl = poster
-                this.plot = description
-                this.tags = tags
-            }
+        return newMovieLoadResponse(title, url, TvType.Movie, url) {
+            this.posterUrl = poster
+            this.plot = description
+            this.tags = tags
         }
     }
 
@@ -147,13 +123,7 @@ class WowProvider : MainAPI() {
             }
             
             callback(
-                ExtractorLink(
-                    name,
-                    "$name ${quality}p",
-                    fullUrl,
-                    mainUrl,
-                    quality
-                )
+                newExtractorLink(name, "$name ${quality}p", fullUrl, mainUrl, quality)
             )
         }
         
