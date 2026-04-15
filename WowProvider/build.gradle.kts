@@ -4,7 +4,7 @@ cloudstream {
     description = "Wow.xxx - Free Porn Videos"
     authors = listOf("senkuboy0-cyber")
     language = "en"
-    tvTypes = listOf("Movie")
+    tvTypes = listOf("Movie", "TvSeries", "Others")
 }
 
 android {
