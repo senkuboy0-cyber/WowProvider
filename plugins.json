@@ -6,7 +6,7 @@
     "version": 1,
     "authors": ["senkuboy0-cyber"],
     "language": "en",
-    "types": ["movie"],
+    "types": ["movie", "tvseries", "others"],
     "repositoryUrl": "https://github.com/senkuboy0-cyber/WowProvider"
   }
 ]
