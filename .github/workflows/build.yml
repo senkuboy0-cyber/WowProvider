@@ -27,7 +27,16 @@ jobs:
       - name: Prepare builds folder
         run: |
           mkdir -p builds
-          cp repo.json builds/
+          cat > builds/repo.json << 'JSON'
+          {
+            "name": "Wow Provider",
+            "description": "Wow.xxx - Free Porn Videos",
+            "manifestVersion": 1,
+            "pluginLists": [
+              "https://raw.githubusercontent.com/senkuboy0-cyber/WowProvider/builds/plugins.json"
+            ]
+          }
+          JSON
           cp WowProvider/build/WowProvider.cs3 builds/
           cat > builds/plugins.json << 'JSON'
           [
