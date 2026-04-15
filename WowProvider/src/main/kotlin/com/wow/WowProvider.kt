@@ -91,8 +91,16 @@ class WowProvider : MainAPI() {
             ?: doc.selectFirst(".video-js")?.attr("poster")
             
         val description = doc.selectFirst("meta[property=og:description]")?.attr("content")
+        
+        // Extract the best quality video URL directly from the page
+        val html = doc.toString()
+        val videoRegex = Regex("""get_file/\d+/[a-f0-9]+/\d+/\d+/[^"'\s]+\.mp4""")
+        val bestVideoUrl = videoRegex.findAll(html)
+            .map { it.value }
+            .firstOrNull() 
+            ?.let { "$mainUrl/$it/" }
 
-        return newMovieLoadResponse(title, url, TvType.Movie, url) {
+        return newMovieLoadResponse(title, url, TvType.Movie, bestVideoUrl ?: url) {
             this.posterUrl = poster
             this.plot = description
         }
@@ -104,10 +112,29 @@ class WowProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        // If data is already a direct video URL, use it
+        if (data.startsWith("$mainUrl/get_file/")) {
+            val quality = when {
+                data.contains("2160m") -> Qualities.P2160.value
+                data.contains("1080m") -> Qualities.P1080.value
+                data.contains("720m") -> Qualities.P720.value
+                data.contains("480m") -> Qualities.P480.value
+                else -> Qualities.Unknown.value
+            }
+            
+            callback(
+                newExtractorLink(name, "$name ${quality}p", data, ExtractorLinkType.VIDEO) {
+                    this.quality = quality
+                    this.headers = headers + mapOf("Referer" to mainUrl)
+                }
+            )
+            return true
+        }
+        
+        // Otherwise parse from HTML
         val doc = app.get(data, headers = headers).document
         val html = doc.toString()
         
-        // Keep trailing slash - it's needed for 302 redirect to work
         val videoRegex = Regex("""get_file/\d+/[a-f0-9]+/\d+/\d+/[^"'\s]+\.mp4""")
         val matches = videoRegex.findAll(html).map { it.value }.distinct().toList()
         
@@ -118,7 +145,6 @@ class WowProvider : MainAPI() {
         val videoHeaders = headers + mapOf("Referer" to mainUrl)
         
         matches.forEach { path ->
-            // Keep trailing slash
             val fullUrl = "$mainUrl/$path/"
             val quality = when {
                 path.contains("2160m") -> Qualities.P2160.value
