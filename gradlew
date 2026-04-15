@@ -1,9 +1,9 @@
 #!/usr/bin/env sh
 
 ##############################################################################
-##
-##  Gradle start up script for UN*X
-##
+##                                                                          ##
+##  Gradle start up script for UN*X                                      ##
+##                                                                          ##
 ##############################################################################
 
 # Attempt to set APP_HOME
@@ -16,11 +16,11 @@ while [ -h "$PRG" ] ; do
     if expr "$link" : '/.*' > /dev/null; then
         PRG="$link"
     else
-        PRG=`dirname "$PRG"`/`$link`
+        PRG=`dirname "$PRG"`/`expr "$ls" : '.*-> \(.*\)$'`
     fi
 done
 SAVED="`pwd`"
-cd "`dirname \"$PRG\"`" >/dev/null
+cd "`dirname "$PRG"`/" >/dev/null
 APP_HOME="`pwd -P`"
 cd "$SAVED" >/dev/null
 
@@ -28,7 +28,7 @@ APP_NAME="Gradle"
 APP_BASE_NAME=`basename "$0"`
 
 # Add default JVM options here. You can also use JAVA_OPTS and GRADLE_OPTS to pass JVM options to this script.
-DEFAULT_JVM_OPTS='"-Xmx64m" "-Xms64m"'
+DEFAULT_JVM_OPTS=""
 
 # Use the maximum available, or set MAX_FD != -1 to use that value.
 MAX_FD="maximum"
@@ -36,9 +36,11 @@ MAX_FD="maximum"
 warn () {
     echo "$*"
 }
+
 die () {
     echo
     echo "$*"
+    echo
     exit 1
 }
 
@@ -67,7 +69,7 @@ CLASSPATH=$APP_HOME/gradle/wrapper/gradle-wrapper.jar
 # Determine the Java command to use to start the JVM.
 if [ -n "$JAVA_HOME" ] ; then
     if [ -x "$JAVA_HOME/jre/sh/java" ] ; then
-        # IBM's JDK on AIX uses strange locations for the executables
+        # IBM's JDK on AIX uses strange paths for the executables
         JAVACMD="$JAVA_HOME/jre/sh/java"
     else
         JAVACMD="$JAVA_HOME/bin/java"
@@ -98,29 +100,36 @@ if [ "$cygwin" = "false" -a "$darwin" = "false" -a "$nonstop" = "false" ] ; then
             warn "Could not set maximum file descriptor limit: $MAX_FD"
         fi
     else
-        warn "Could not query maximum file descriptor limit: $MAX_FD_LIMIT"
+        warn "Could not query maximum file descriptor limit"
     fi
 fi
 
 # For Darwin, add options to specify how the application appears in the dock
 if $darwin; then
-    GRADLE_OPTS="$GRADLE_OPTS ""$-Xdock:name=$APP_NAME""""-Xdock:icon=$APP_HOME/media/gradle.icns""
+    GRADLE_OPTS="$GRADLE_OPTS """-Xdock:name=$APP_NAME""""-Xdock:icon=$APP_HOME/media/gradle.icns""""
 fi
 
 # For Cygwin or MSYS, switch paths to Windows format before running java
 if $cygwin ; then
     APP_HOME=`cygpath --path --mixed "$APP_HOME"`
     CLASSPATH=`cygpath --path --mixed "$CLASSPATH"`
-    JVM_OPTS=`cygpath --path --mixed "$JVM_OPTS"`
-    GRADLE_OPTS=`cygpath --path --mixed "$GRADLE_OPTS"`
+    JAVACMD=`cygpath --unix "$JAVACMD"`
+
+    # We build the pattern for arguments to be converted via cygpath
+    ROOT=`dirname "$0"`;
+    ARGS=`echo "$@" | sed -e 's;\\-\\-project\\-dir;\\-P;g' -e 's;\\-project\\-dir;\\-P;g'`
+    ARGS=`echo "$ARGS" | sed -e "s;-I;-I;g" -e "s;-I;-I;g"`
+    ARGS=`echo "$ARGS" | sed -e "s;-i;-i;g" -e "s;-i;-i;g"`
+else
+    ARGS="$@"
 fi
 
 # Collect all arguments for the java command, following the shell quoting and substitution rules
-eval set -- $DEFAULT_JVM_OPTS $JAVA_OPTS $GRADLE_OPTS "-Dorg.gradle.appname=$APP_BASE_NAME" -classpath "\"$CLASSPATH\"" org.gradle.wrapper.GradleWrapperMain "$@"
+eval set -- $DEFAULT_JVM_OPTS $JAVA_OPTS $GRADLE_OPTS "-Dorg.gradle.appname=$APP_BASE_NAME" -classpath """$CLASSPATH""" org.gradle.wrapper.GradleWrapperMain "$ARGS"
 
 # by default we should be in the correct project dir, but when run from Finder on Mac, the cwd is wrong
-if [ "`dirname "$0"`" = "." ]; then
-  cd "`dirname "$APP_HOME"`"
+if [ "$(uname)" = "Darwin" ] && [ "$HOME" = "$PWD" ]; then
+  cd "$(dirname "$0")"
 fi
 
 exec "$JAVACMD" "$@"
