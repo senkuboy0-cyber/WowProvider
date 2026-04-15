@@ -8,7 +8,7 @@ class WowProvider : MainAPI() {
     override var mainUrl = "https://www.wow.xxx"
     override var lang = "en"
     override val hasMainPage = true
-    override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries, TvType.Others)
+    override val supportedTypes = setOf(TvType.Movie)
 
     private val headers = mapOf(
         "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -24,10 +24,8 @@ class WowProvider : MainAPI() {
         "$mainUrl/categories/blowjob/" to "Blowjob",
         "$mainUrl/categories/brunette/" to "Brunette",
         "$mainUrl/categories/blonde/" to "Blonde",
-        "$mainUrl/categories/hd/" to "HD",
         "$mainUrl/categories/milf/" to "MILF",
-        "$mainUrl/categories/teen/" to "Teen",
-        "$mainUrl/categories/indian/" to "Indian"
+        "$mainUrl/categories/teen/" to "Teen"
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
@@ -43,14 +41,17 @@ class WowProvider : MainAPI() {
         }
         
         val doc = app.get(url, headers = headers).document
-        val items = doc.select("div.video-item, div.thumb, article.post").mapNotNull { el ->
-            val a = el.selectFirst("a[href]") ?: return@mapNotNull null
-            val href = a.attr("abs:href").ifBlank { return@mapNotNull null }
-            val title = a.attr("title").ifBlank { a.selectFirst("span.title, h2, h3")?.text() }?.trim() ?: return@mapNotNull null
-            val img = el.selectFirst("img")
-            val poster = img?.attr("data-src")?.ifBlank { img.attr("src") } ?: return@mapNotNull null
+        val items = doc.select(".thumb").mapNotNull { el ->
+            val a = el.closest("a") ?: return@mapNotNull null
+            val href = a.attr("href").ifBlank { return@mapNotNull null }
+            val title = el.attr("alt").ifBlank { 
+                a.attr("title").ifBlank { return@mapNotNull null } 
+            }.trim()
+            val poster = el.attr("src") ?: return@mapNotNull null
             
-            if (title.isBlank() || href.contains("/models/") || href.contains("/channels/") || href.contains("/pornstars/")) return@mapNotNull null
+            if (title.isBlank() || href.contains("/models/") || href.contains("/channels/") || !href.startsWith("$mainUrl/videos/")) {
+                return@mapNotNull null
+            }
             
             newMovieSearchResponse(title, href, TvType.Movie) { 
                 posterUrl = poster 
@@ -61,14 +62,17 @@ class WowProvider : MainAPI() {
 
     override suspend fun search(query: String): List<SearchResponse> {
         val doc = app.get("$mainUrl/search/${query.replace(" ", "-")}/relevance/", headers = headers).document
-        return doc.select("div.video-item, div.thumb, article.post").mapNotNull { el ->
-            val a = el.selectFirst("a[href]") ?: return@mapNotNull null
-            val href = a.attr("abs:href").ifBlank { return@mapNotNull null }
-            val title = a.attr("title").ifBlank { a.selectFirst("span.title, h2, h3")?.text() }?.trim() ?: return@mapNotNull null
-            val img = el.selectFirst("img")
-            val poster = img?.attr("data-src")?.ifBlank { img.attr("src") } ?: return@mapNotNull null
+        return doc.select(".thumb").mapNotNull { el ->
+            val a = el.closest("a") ?: return@mapNotNull null
+            val href = a.attr("href").ifBlank { return@mapNotNull null }
+            val title = el.attr("alt").ifBlank { 
+                a.attr("title").ifBlank { return@mapNotNull null } 
+            }.trim()
+            val poster = el.attr("src") ?: return@mapNotNull null
             
-            if (title.isBlank()) return@mapNotNull null
+            if (title.isBlank() || !href.startsWith("$mainUrl/videos/")) {
+                return@mapNotNull null
+            }
             
             newMovieSearchResponse(title, href, TvType.Movie) { 
                 posterUrl = poster 
@@ -84,17 +88,13 @@ class WowProvider : MainAPI() {
             ?: url.substringAfterLast("/").replace("-", " ")
             
         val poster = doc.selectFirst("meta[property=og:image]")?.attr("content") 
-            ?: doc.selectFirst(".video-poster img")?.attr("src")
+            ?: doc.selectFirst(".video-js")?.attr("poster")
             
-        val description = doc.selectFirst("meta[property=og:description]")?.attr("content") 
-            ?: doc.selectFirst(".video-info, .description")?.text()
-            
-        val tags = doc.select(".tags a, .video-tags a").map { it.text() }.take(10)
+        val description = doc.selectFirst("meta[property=og:description]")?.attr("content")
 
         return newMovieLoadResponse(title, url, TvType.Movie, url) {
             this.posterUrl = poster
             this.plot = description
-            this.tags = tags
         }
     }
 
