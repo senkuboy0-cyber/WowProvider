@@ -121,12 +121,13 @@ class WowProvider : MainAPI() {
                 path.contains("1080m") -> Qualities.P1080.value
                 path.contains("720m") -> Qualities.P720.value
                 path.contains("480m") -> Qualities.P480.value
-                else -> Qualities.P360.value
+                else -> Qualities.Unknown.value
             }
             
             callback(
-                newExtractorLink(name, "$name ${quality}p", fullUrl, mainUrl, quality) {
-                    this.headers = headers
+                newExtractorLink(name, "$name ${quality}p", fullUrl, ExtractorLinkType.VIDEO) {
+                    this.quality = quality
+                    this.headers = this@WowProvider.headers
                 }
             )
         }
