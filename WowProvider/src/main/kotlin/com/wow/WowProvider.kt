@@ -117,21 +117,17 @@ class WowProvider : MainAPI() {
         matches.forEach { path ->
             val fullUrl = "$mainUrl/$path"
             val quality = when {
-                path.contains("2160m") -> 2160
-                path.contains("1080m") -> 1080
-                path.contains("720m") -> 720
-                path.contains("480m") -> 480
-                else -> 360
+                path.contains("2160m") -> Qualities.P2160.value
+                path.contains("1080m") -> Qualities.P1080.value
+                path.contains("720m") -> Qualities.P720.value
+                path.contains("480m") -> Qualities.P480.value
+                else -> Qualities.P360.value
             }
             
             callback(
-                ExtractorLink(
-                    name,
-                    "$name ${quality}p",
-                    fullUrl,
-                    mainUrl,
-                    quality
-                )
+                newExtractorLink(name, "$name ${quality}p", fullUrl, mainUrl, quality) {
+                    this.headers = headers
+                }
             )
         }
         
