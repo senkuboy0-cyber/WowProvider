@@ -19,7 +19,9 @@ jobs:
           distribution: 'adopt'
 
       - name: Generate Gradle Wrapper
-        run: ./gradlew wrapper
+        run: |
+          chmod +x gradlew
+          ./gradlew wrapper
 
       - name: Commit and Push Gradle Wrapper
         run: |
