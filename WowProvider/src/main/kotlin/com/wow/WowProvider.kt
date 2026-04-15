@@ -18,25 +18,49 @@ class WowProvider : MainAPI() {
     override val mainPage = mainPageOf(
         "$mainUrl/latest-updates/" to "Latest",
         "$mainUrl/top-rated/" to "Top Rated",
-        "$mainUrl/most-popular/" to "Most Popular"
+        "$mainUrl/most-popular/" to "Most Popular",
+        "$mainUrl/categories/amateur/" to "Amateur",
+        "$mainUrl/categories/anal/" to "Anal",
+        "$mainUrl/categories/big-tits/" to "Big Tits",
+        "$mainUrl/categories/blowjob/" to "Blowjob",
+        "$mainUrl/categories/brunette/" to "Brunette",
+        "$mainUrl/categories/blonde/" to "Blonde",
+        "$mainUrl/categories/hd/" to "HD",
+        "$mainUrl/categories/milf/" to "MILF",
+        "$mainUrl/categories/teen/" to "Teen",
+        "$mainUrl/categories/massage/" to "Massage",
+        "$mainUrl/categories/indian/" to "Indian",
+        "$mainUrl/categories/interracial/" to "Interracial",
+        "$mainUrl/categories/lesbian/" to "Lesbian",
+        "$mainUrl/categories/pov/" to "POV",
+        "$mainUrl/categories/threesome/" to "Threesome",
+        "$mainUrl/categories/mature/" to "Mature",
+        "$mainUrl/categories/hardcore/" to "Hardcore",
+        "$mainUrl/categories/ebony/" to "Ebony",
+        "$mainUrl/categories/latina/" to "Latina",
+        "$mainUrl/categories/asian/" to "Asian"
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val url = if (page > 1) {
             val base = request.data.trimEnd('/')
-            "$base/$page/"
+            if (base.contains("/categories/") || base.contains("/tags/")) {
+                "$base/page/$page/"
+            } else {
+                "$base/$page/"
+            }
         } else {
             request.data
         }
         
         val doc = app.get(url, headers = headers).document
-        val items = doc.select("div.video-item, div.thumb").mapNotNull { element ->
+        val items = doc.select("div.video-item, div.thumb, article.post").mapNotNull { element ->
             val a = element.selectFirst("a[href]") ?: return@mapNotNull null
             val href = a.attr("abs:href").ifBlank { return@mapNotNull null }
-            val title = a.attr("title").ifBlank { a.selectFirst("span.title")?.text() }?.trim() ?: return@mapNotNull null
+            val title = a.attr("title").ifBlank { a.selectFirst("span.title, h2, h3")?.text() }?.trim() ?: return@mapNotNull null
             val poster = element.selectFirst("img")?.attr("data-src")?.ifBlank { it.attr("src") } ?: return@mapNotNull null
             
-            if (title.isBlank() || href.contains("/models/") || href.contains("/channels/")) return@mapNotNull null
+            if (title.isBlank() || href.contains("/models/") || href.contains("/channels/") || href.contains("/pornstars/")) return@mapNotNull null
             
             val type = if (title.contains("episode", true) || title.contains("series", true)) TvType.TvSeries else TvType.Movie
             
@@ -49,10 +73,10 @@ class WowProvider : MainAPI() {
 
     override suspend fun search(query: String): List<SearchResponse> {
         val doc = app.get("$mainUrl/search/${query.replace(" ", "-")}/relevance/", headers = headers).document
-        return doc.select("div.video-item, div.thumb").mapNotNull { element ->
+        return doc.select("div.video-item, div.thumb, article.post").mapNotNull { element ->
             val a = element.selectFirst("a[href]") ?: return@mapNotNull null
             val href = a.attr("abs:href").ifBlank { return@mapNotNull null }
-            val title = a.attr("title").ifBlank { a.selectFirst("span.title")?.text() }?.trim() ?: return@mapNotNull null
+            val title = a.attr("title").ifBlank { a.selectFirst("span.title, h2, h3")?.text() }?.trim() ?: return@mapNotNull null
             val poster = element.selectFirst("img")?.attr("data-src")?.ifBlank { it.attr("src") } ?: return@mapNotNull null
             
             if (title.isBlank()) return@mapNotNull null
