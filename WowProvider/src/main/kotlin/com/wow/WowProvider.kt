@@ -22,8 +22,6 @@ class WowProvider : MainAPI() {
         "$mainUrl/categories/anal/" to "Anal",
         "$mainUrl/categories/big-tits/" to "Big Tits",
         "$mainUrl/categories/blowjob/" to "Blowjob",
-        "$mainUrl/categories/brunette/" to "Brunette",
-        "$mainUrl/categories/blonde/" to "Blonde",
         "$mainUrl/categories/milf/" to "MILF",
         "$mainUrl/categories/teen/" to "Teen"
     )
@@ -31,31 +29,19 @@ class WowProvider : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val url = if (page > 1) {
             val base = request.data.trimEnd('/')
-            if (base.contains("/categories/") || base.contains("/tags/")) {
-                "$base/page/$page/"
-            } else {
-                "$base/$page/"
-            }
-        } else {
-            request.data
-        }
-        
+            if (base.contains("/categories/")) "$base/page/$page/" else "$base/$page/"
+        } else request.data
+
         val doc = app.get(url, headers = headers).document
         val items = doc.select(".thumb").mapNotNull { el ->
             val a = el.closest("a") ?: return@mapNotNull null
             val href = a.attr("href").ifBlank { return@mapNotNull null }
-            val title = el.attr("alt").ifBlank { 
-                a.attr("title").ifBlank { return@mapNotNull null } 
+            if (!href.contains("/videos/")) return@mapNotNull null
+            val title = el.attr("alt").ifBlank {
+                a.attr("title").ifBlank { return@mapNotNull null }
             }.trim()
             val poster = el.attr("src") ?: return@mapNotNull null
-            
-            if (title.isBlank() || href.contains("/models/") || href.contains("/channels/") || !href.startsWith("$mainUrl/videos/")) {
-                return@mapNotNull null
-            }
-            
-            newMovieSearchResponse(title, href, TvType.Movie) { 
-                posterUrl = poster 
-            }
+            newMovieSearchResponse(title, href, TvType.Movie) { posterUrl = poster }
         }
         return newHomePageResponse(request.name, items, page < 10)
     }
@@ -65,42 +51,23 @@ class WowProvider : MainAPI() {
         return doc.select(".thumb").mapNotNull { el ->
             val a = el.closest("a") ?: return@mapNotNull null
             val href = a.attr("href").ifBlank { return@mapNotNull null }
-            val title = el.attr("alt").ifBlank { 
-                a.attr("title").ifBlank { return@mapNotNull null } 
+            if (!href.contains("/videos/")) return@mapNotNull null
+            val title = el.attr("alt").ifBlank {
+                a.attr("title").ifBlank { return@mapNotNull null }
             }.trim()
             val poster = el.attr("src") ?: return@mapNotNull null
-            
-            if (title.isBlank() || !href.startsWith("$mainUrl/videos/")) {
-                return@mapNotNull null
-            }
-            
-            newMovieSearchResponse(title, href, TvType.Movie) { 
-                posterUrl = poster 
-            }
+            newMovieSearchResponse(title, href, TvType.Movie) { posterUrl = poster }
         }
     }
 
     override suspend fun load(url: String): LoadResponse {
         val doc = app.get(url, headers = headers).document
-        
-        val title = doc.selectFirst("h1.page-title, h1.title")?.text()?.trim() 
+        val title = doc.selectFirst("h1")?.text()?.trim()
             ?: doc.selectFirst("meta[property=og:title]")?.attr("content")?.trim()
             ?: url.substringAfterLast("/").replace("-", " ")
-            
-        val poster = doc.selectFirst("meta[property=og:image]")?.attr("content") 
-            ?: doc.selectFirst(".video-js")?.attr("poster")
-            
+        val poster = doc.selectFirst("meta[property=og:image]")?.attr("content")
         val description = doc.selectFirst("meta[property=og:description]")?.attr("content")
-        
-        // Extract the best quality video URL directly from the page
-        val html = doc.toString()
-        val videoRegex = Regex("""get_file/\d+/[a-f0-9]+/\d+/\d+/[^"'\s]+\.mp4""")
-        val bestVideoUrl = videoRegex.findAll(html)
-            .map { it.value }
-            .firstOrNull() 
-            ?.let { "$mainUrl/$it/" }
-
-        return newMovieLoadResponse(title, url, TvType.Movie, bestVideoUrl ?: url) {
+        return newMovieLoadResponse(title, url, TvType.Movie, url) {
             this.posterUrl = poster
             this.plot = description
         }
@@ -112,9 +79,37 @@ class WowProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        // If data is already a direct video URL, use it
-        if (data.startsWith("$mainUrl/get_file/")) {
+        val html = app.get(data, headers = headers).text
+
+        // get_file URL গুলো বের করো — JS execute ছাড়াই HTML এ থাকে
+        val videoRegex = Regex("""["'](https?://www\.wow\.xxx/get_file/[^"'\s]+\.mp4/?)[\"']""")
+        val matches = videoRegex.findAll(html)
+            .map { it.groupValues[1] }
+            .distinct()
+            .toList()
+
+        if (matches.isEmpty()) return false
+
+        matches.forEach { videoUrl ->
             val quality = when {
+                videoUrl.contains("2160m") -> Qualities.P2160.value
+                videoUrl.contains("1080m") -> Qualities.P1080.value
+                videoUrl.contains("720m")  -> Qualities.P720.value
+                videoUrl.contains("480m")  -> Qualities.P480.value
+                videoUrl.contains("360m")  -> Qualities.P360.value
+                else -> Qualities.Unknown.value
+            }
+            callback(
+                newExtractorLink(name, name, videoUrl, ExtractorLinkType.VIDEO) {
+                    this.quality = quality
+                    this.referer = mainUrl
+                    this.headers = headers
+                }
+            )
+        }
+        return true
+    }
+}            val quality = when {
                 data.contains("2160m") -> Qualities.P2160.value
                 data.contains("1080m") -> Qualities.P1080.value
                 data.contains("720m") -> Qualities.P720.value
