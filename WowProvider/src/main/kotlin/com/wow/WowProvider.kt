@@ -73,35 +73,50 @@ class WowProvider : MainAPI() {
     }
 
     override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ): Boolean {
-        val html = app.get(data, headers = headers).text
-        val videoRegex = Regex("""["'](https?://www\.wow\.xxx/get_file/[^"'\s]+\.mp4/?)[\"']""")
-        val matches = videoRegex.findAll(html)
-            .map { it.groupValues[1] }
-            .distinct()
-            .toList()
-        if (matches.isEmpty()) return false
-        matches.forEach { videoUrl ->
-            val quality = when {
-                videoUrl.contains("2160m") -> Qualities.P2160.value
-                videoUrl.contains("1080m") -> Qualities.P1080.value
-                videoUrl.contains("720m")  -> Qualities.P720.value
-                videoUrl.contains("480m")  -> Qualities.P480.value
-                videoUrl.contains("360m")  -> Qualities.P360.value
-                else -> Qualities.Unknown.value
-            }
-            callback(
-                newExtractorLink(name, name, videoUrl, ExtractorLinkType.VIDEO) {
-                    this.quality = quality
-                    this.referer = mainUrl
-                    this.headers = headers
-                }
-            )
+    data: String,
+    isCasting: Boolean,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+): Boolean {
+    val html = app.get(data, headers = headers).text
+
+    val videoRegex = Regex("""["'](https?://www\.wow\.xxx/get_file/[^"'\s]+\.mp4/?)[\"']""")
+    val matches = videoRegex.findAll(html)
+        .map { it.groupValues[1] }
+        .distinct()
+        .toList()
+
+    if (matches.isEmpty()) return false
+
+    matches.forEach { videoUrl ->
+        val quality = when {
+            videoUrl.contains("2160m") -> Qualities.P2160.value
+            videoUrl.contains("1080m") -> Qualities.P1080.value
+            videoUrl.contains("720m")  -> Qualities.P720.value
+            videoUrl.contains("480m")  -> Qualities.P480.value
+            videoUrl.contains("360m")  -> Qualities.P360.value
+            else -> Qualities.Unknown.value
         }
-        return true
+
+        // Redirect follow করে final CDN URL বের করো
+        val finalUrl = try {
+            app.get(
+                videoUrl,
+                headers = headers + mapOf("Referer" to mainUrl),
+                allowRedirects = true
+            ).url.takeIf { it.startsWith("http") && it != videoUrl } ?: videoUrl
+        } catch (e: Exception) {
+            videoUrl
+        }
+
+        callback(
+            newExtractorLink(name, name, finalUrl, ExtractorLinkType.VIDEO) {
+                this.quality = quality
+                this.referer = mainUrl
+                this.headers = headers
+            }
+        )
+    }
+    return true
     }
 }
